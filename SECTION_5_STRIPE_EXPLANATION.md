@@ -1,0 +1,6 @@
+# Section 5: Stripe Checkout Implementation Explanation
+
+## How to Implement Stripe Checkout for Application Fee
+
+To implement Stripe Checkout for application fees, first create a Supabase Edge Function that generates a Stripe Checkout Session using the Stripe API with the application details and fee amount. Store the `stripe_session_id` and `payment_request_id` (from the session's payment_intent) in the `applications` table, setting `payment_status` to 'pending'. Redirect the user to Stripe's hosted checkout page using the session URL. After payment completion, Stripe sends a webhook event to another Edge Function endpoint. Verify the webhook signature using the Stripe webhook secret to ensure authenticity. On receiving the `checkout.session.completed` event, extract the `application_id` from the session metadata and update the `applications` table: set `payment_status` to 'paid' and update the `status` field to 'under_review' (or the next stage in your workflow). Optionally, create a timeline entry or notification to track the payment event. Finally, redirect the user back to your application with a success parameter, where the frontend can refetch and display the updated payment status.
+
