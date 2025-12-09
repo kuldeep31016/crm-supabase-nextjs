@@ -1,10 +1,5 @@
--- LearnLynk CRM Schema Migration
--- Creates all tables, constraints, indexes, and relationships
-
--- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -13,9 +8,6 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- ============================================
--- LEADS TABLE
--- ============================================
 CREATE TABLE leads (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
@@ -31,9 +23,6 @@ CREATE TABLE leads (
     CONSTRAINT leads_stage_check CHECK (stage IN ('new', 'contacted', 'qualified', 'converted', 'lost'))
 );
 
--- ============================================
--- APPLICATIONS TABLE
--- ============================================
 CREATE TABLE applications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
@@ -51,9 +40,6 @@ CREATE TABLE applications (
     CONSTRAINT applications_payment_status_check CHECK (payment_status IN ('unpaid', 'pending', 'paid', 'failed', 'refunded'))
 );
 
--- ============================================
--- TASKS TABLE
--- ============================================
 CREATE TABLE tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
@@ -72,9 +58,6 @@ CREATE TABLE tasks (
     CONSTRAINT tasks_due_at_check CHECK (due_at >= created_at)
 );
 
--- ============================================
--- TEAMS TABLE (for RLS)
--- ============================================
 CREATE TABLE teams (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
@@ -83,9 +66,6 @@ CREATE TABLE teams (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ============================================
--- USER_TEAMS TABLE (junction table for RLS)
--- ============================================
 CREATE TABLE user_teams (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -94,25 +74,16 @@ CREATE TABLE user_teams (
     UNIQUE(user_id, team_id)
 );
 
--- ============================================
--- INDEXES FOR LEADS
--- ============================================
 CREATE INDEX idx_leads_owner_id ON leads(owner_id);
 CREATE INDEX idx_leads_stage ON leads(stage);
 CREATE INDEX idx_leads_created_at ON leads(created_at DESC);
 CREATE INDEX idx_leads_tenant_id ON leads(tenant_id);
 CREATE INDEX idx_leads_owner_stage ON leads(owner_id, stage);
 
--- ============================================
--- INDEXES FOR APPLICATIONS
--- ============================================
 CREATE INDEX idx_applications_lead_id ON applications(lead_id);
 CREATE INDEX idx_applications_tenant_id ON applications(tenant_id);
 CREATE INDEX idx_applications_status ON applications(status);
 
--- ============================================
--- INDEXES FOR TASKS
--- ============================================
 CREATE INDEX idx_tasks_due_at ON tasks(due_at);
 CREATE INDEX idx_tasks_related_id ON tasks(related_id);
 CREATE INDEX idx_tasks_tenant_id ON tasks(tenant_id);
@@ -120,15 +91,9 @@ CREATE INDEX idx_tasks_assigned_to ON tasks(assigned_to);
 CREATE INDEX idx_tasks_status ON tasks(status);
 CREATE INDEX idx_tasks_due_today ON tasks(due_at) WHERE status = 'pending';
 
--- ============================================
--- INDEXES FOR USER_TEAMS
--- ============================================
 CREATE INDEX idx_user_teams_user_id ON user_teams(user_id);
 CREATE INDEX idx_user_teams_team_id ON user_teams(team_id);
 
--- ============================================
--- TRIGGERS FOR UPDATED_AT
--- ============================================
 CREATE TRIGGER update_leads_updated_at BEFORE UPDATE ON leads
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -140,4 +105,3 @@ CREATE TRIGGER update_tasks_updated_at BEFORE UPDATE ON tasks
 
 CREATE TRIGGER update_teams_updated_at BEFORE UPDATE ON teams
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
